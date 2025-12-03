@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Material Admin Pro — Manajemen Surat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
+  <style>
+    body { font-family: 'Roboto', sans-serif; }
+    .ripple { position: relative; overflow: hidden; }
+    .ripple:after {
+      content: "";
+      position: absolute;
+      background: rgba(255,255,255,0.3);
+      border-radius: 50%;
+      transform: scale(0);
+      opacity: 0;
+      transition: all 0.6s;
+    }
+    .ripple:active:after {
+      width: 200px; height: 200px;
+      top: var(--y); left: var(--x);
+      opacity: 1;
+      transform: scale(1);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-72 bg-white shadow-xl p-6 flex flex-col border-r">
+      <h1 class="text-2xl font-bold mb-10 text-gray-800">Manajemen Surat</h1>
+
+      <nav class="flex flex-col gap-2">
+        <a data-page="dashboard" class="menu-item ripple flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-gray-200 cursor-pointer">
+          <span class="material-symbols-rounded">dashboard</span>Dashboard
+        </a>
+        <a data-page="datasurat" class="menu-item ripple flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-gray-200 cursor-pointer">
+          <span class="material-symbols-rounded">mail</span>Data Surat
+        </a>
+        <a data-page="upload" class="menu-item ripple flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-gray-200 cursor-pointer">
+          <span class="material-symbols-rounded">upload</span>Upload Surat
+        </a>
+        <a data-page="settings" class="menu-item ripple flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-gray-200 cursor-pointer">
+          <span class="material-symbols-rounded">settings</span>Pengaturan
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Content -->
+    <main id="content" class="flex-1 p-8 overflow-auto"></main>
+  </div>
+
+  <script>
+    const menuItems = document.querySelectorAll('.menu-item');
+    const content = document.getElementById('content');
+
+    document.addEventListener('click', (e) => {
+      if(e.target.classList.contains('ripple')){
+        let rect = e.target.getBoundingClientRect();
+        e.target.style.setProperty('--x', (e.clientX - rect.left) + 'px');
+        e.target.style.setProperty('--y', (e.clientY - rect.top) + 'px');
+      }
+    });
+
+    function loadPage(page){
+      fetch(`pages/${page}.html`).then(res => res.text()).then(html => {
+        content.classList.add('opacity-0');
+        setTimeout(() => { content.innerHTML = html; content.classList.remove('opacity-0'); }, 200);
+      });
+    }
+
+    function setActiveMenu(el){
+      menuItems.forEach(i => i.classList.remove('bg-gray-800','text-white'));
+      el.classList.add('bg-gray-800','text-white');
+    }
+
+    menuItems.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const page = btn.getAttribute('data-page');
+        loadPage(page);
+        setActiveMenu(btn);
+      });
+    });
+
+    loadPage('dashboard');
+    setActiveMenu(menuItems[0]);
+  </script>
+</body>
+</html>
+
+<!-- dashboard -->
+
+
+<script>
+// -----------------------------
+// Helper: konversi DD-MM-YYYY -> Date
+// -----------------------------
+function parseDMY(dateStr) {
+  if (!dateStr) return null;
+  const parts = String(dateStr).trim().split("-");
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts;
+  // buat Date dari YYYY-MM-DD agar konsisten
+  const iso = `${y.padStart(4,'0')}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  const dt = new Date(iso);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+// -----------------------------
+// JSONP loader
+// -----------------------------
+function getJSONP(url, callback) {
+  const script = document.createElement("script");
+  // pastikan callback dikirim di URL juga (beberapa server butuh param callback)
+  const separator = url.includes("?") ? "&" : "?";
+  script.src = url + separator + "callback=" + callback.name;
+  script.onerror = () => console.error("JSONP load error:", script.src);
+  document.body.appendChild(script);
+}
+
+// -----------------------------
+// Main callback: handleSurat(data)
+// Paste/letakkan ini di pages/dashboard.html BAWAH markup dashboard
+// -----------------------------
+function handleSurat(data) {
+  try {
+    console.log("DATA MASUK:", data);
+
+    // safety: pastikan data array
+    if (!Array.isArray(data)) {
+      console.warn("Response bukan array:", data);
+      return;
+    }
+
+    // pastikan elemen ada sebelum mengupdate
+    const elTotal = document.getElementById("stat_total");
+    const elToday = document.getElementById("stat_today");
+    const elWeek = document.getElementById("stat_week");
+    const tbody = document.getElementById("activity_body");
+
+    // jika elemen tidak ditemukan, hentikan (mencegah error)
+    if (!elTotal || !elToday || !elWeek || !tbody) {
+      console.warn("Elemen dashboard tidak ditemukan, pastikan script berada di pages/dashboard.html setelah markup.");
+      return;
+    }
+
+    // ---------- tanggal referensi ----------
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const now = new Date();
+    const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+
+    // ---------- Total ----------
+    elTotal.textContent = data.length;
+
+    // ---------- Surat hari ini ----------
+    const suratHariIni = data.filter(d => {
+      const tgl = parseDMY(d.Tgl_terima_surat);
+      if (!tgl) return false;
+      return tgl.toISOString().split("T")[0] === today;
+    }).length;
+    elToday.textContent = suratHariIni;
+
+    // ---------- Surat minggu ini ----------
+    const suratMingguIni = data.filter(d => {
+      const tgl = parseDMY(d.Tgl_terima_surat);
+      return tgl && tgl >= weekAgo;
+    }).length;
+    elWeek.textContent = suratMingguIni;
+
+    // ---------- Tabel 10 terbaru ----------
+    tbody.innerHTML = "";
+    data.slice(-10).reverse().forEach(r => {
+      const tgl = r.Tgl_terima_surat || "";
+      const asal = r.Asal_surat || "";
+      const perihal = r.Perihal || "";
+      tbody.insertAdjacentHTML("beforeend", `
+        <tr class="border-b hover:bg-gray-50">
+          <td class="py-2">${tgl}</td>
+          <td class="py-2">${asal}</td>
+          <td class="py-2">${perihal}</td>
+          <td class="py-2 text-blue-600 font-semibold">Masuk</td>
+        </tr>
+      `);
+    });
+
+  } catch (err) {
+    console.error("handleSurat error:", err);
+  }
+}
+
+// -----------------------------
+// Fungsi untuk memulai load data
+// Panggil loadSuratJSONP() hanya setelah dashboard HTML dimuat ke DOM
+// -----------------------------
+function loadSuratJSONP() {
+  const url = "https://script.google.com/macros/s/AKfycbwMOakn0M2r7qwy-j2DhcT581Ia0X_-8Gs2I3l6M1w3KCNzRQR00A-cKNbUJZ8TvwMH/exec?action=getSurat";
+  getJSONP(url, handleSurat);
+}
+
+// Jika kamu menaruh skrip ini di pages/dashboard.html (di bawah markup), panggil langsung:
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", loadSuratJSONP);
+} else {
+  // kalau sudah loaded, jalankan langsung
+  loadSuratJSONP();
+}
+</script>
+
