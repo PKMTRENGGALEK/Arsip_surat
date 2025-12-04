@@ -20,6 +20,7 @@
     background-color: #f9fafb;
     border-bottom: 2px solid #e5e7eb;
     text-align: left;
+    white-space: nowrap; /* Mencegah teks header wrap */
   }
 
   /* Styling Body */
@@ -27,6 +28,7 @@
     padding: 1rem 1.5rem !important; /* Padding lebih lega */
     vertical-align: middle;
     border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap; /* Mencegah teks body wrap, mendorong scroll horizontal */
   }
 
   /* Hover Effect pada Baris */
@@ -80,46 +82,234 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  /* --- MEDIA QUERY UNTUK RESPONSIVITAS --- */
+  @media (max-width: 768px) {
+    /* Kurangi padding pada sel tabel di mobile */
+    #suratMasukTable thead th,
+    #suratMasukTable tbody td {
+      padding: 0.75rem 1rem !important;
+    }
+
+    /* Buat kontrol DataTables lebih kompak di mobile */
+    #suratMasukTable_wrapper .dataTables_info,
+    #suratMasukTable_wrapper .dataTables_length,
+    #suratMasukTable_wrapper .dataTables_filter,
+    #suratMasukTable_wrapper .dataTables_paginate {
+      padding: 0.75rem 1rem;
+      text-align: center; /* Pusatkan kontrol di mobile */
+    }
+
+    #suratMasukTable_wrapper .dataTables_filter {
+      text-align: left; /* Kembalikan search ke kiri */
+    }
+
+    /* Tampilkan info dan pagination di baris terpisah di mobile */
+    #suratMasukTable_wrapper .top {
+      display: flex;
+      flex-direction: column;
+    }
+    #suratMasukTable_wrapper .bottom {
+      display: flex;
+      flex-direction: column-reverse;
+    }
+  }
 </style>
 
-<!-- Header Halaman -->
-<div class="flex justify-between items-center mb-6">
-  <h2 class="text-3xl font-semibold text-gray-800">Daftar Surat Masuk</h2>
-  <button
-    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
-  >
-    <span class="material-symbols-rounded">add</span>
-    Tambah Surat Baru
-  </button>
-</div>
-
-<!-- Card untuk Tabel -->
-<div
-  class="bg-white shadow-md rounded-2xl border border-gray-100 overflow-hidden"
->
-  <div class="p-6">
-    <p class="text-gray-600 text-sm">
-      Daftar seluruh surat masuk yang tercatat dalam sistem. Gunakan kolom
-      pencarian untuk memfilter data.
-    </p>
+<!-- Wrapper Utama dengan Padding Responsif -->
+<div class="p-4 md:p-6">
+  <!-- Header Halaman -->
+  <!-- 1. Ubah flex direction untuk mobile -->
+  <div class="flex flex-col md:flex-row justify-between md:items-center mb-6">
+    <h2 class="text-2xl md:text-3xl font-semibold text-gray-800 mb-4 md:mb-0">
+      Daftar Surat Masuk
+    </h2>
+    <button
+      id="openModalBtn"
+      class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors w-full md:w-auto justify-center"
+    >
+      <span class="material-symbols-rounded">add</span>
+      Tambah Surat Baru
+    </button>
   </div>
 
-  <!-- KONTAINER BARU UNTUK DATATABLES -->
-  <div class="datatable-container">
-    <table id="suratMasukTable" class="display">
-      <thead>
-        <tr>
-          <th>No. Surat</th>
-          <th>Tanggal Surat</th>
-          <th>Asal Surat</th>
-          <th>Perihal</th>
-          <th>Prioritas</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- TBody akan diisi otomatis oleh DataTables -->
-      </tbody>
-    </table>
+  <!-- Card untuk Tabel -->
+  <div
+    class="bg-white shadow-md rounded-2xl border border-gray-100 overflow-hidden"
+  >
+    <div class="p-4 md:p-6">
+      <p class="text-gray-600 text-sm">
+        Daftar seluruh surat masuk yang tercatat dalam sistem. Gunakan kolom
+        pencarian untuk memfilter data.
+      </p>
+    </div>
+
+    <!-- 2. Wrapper untuk Horizontal Scroll di Mobile -->
+    <div class="overflow-x-auto">
+      <!-- KONTAINER BARU UNTUK DATATABLES -->
+      <div class="datatable-container">
+        <table id="suratMasukTable" class="display table-striped">
+          <thead>
+            <tr>
+              <!-- <th>Tanggal Terima Surat</th> -->
+              <th>No. Surat</th>
+              <th>Tanggal Surat</th>
+              <th>Asal Surat</th>
+              <th>Perihal</th>
+              <th>Prioritas</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- TBody akan diisi otomatis oleh DataTables -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL TAMBAH SURAT ==================== -->
+<!-- Modal Container (Tersembunyi secara default) -->
+<div
+  id="addLetterModal"
+  class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50"
+>
+  <div
+    class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+  >
+    <!-- Modal Header -->
+    <div class="flex justify-between items-center p-6 border-b">
+      <h3 class="text-xl font-semibold text-gray-800">
+        Tambah Surat Masuk Baru
+      </h3>
+      <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+
+    <!-- Modal Body (Form) -->
+    <form id="addLetterForm" class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="noSurat" class="block text-sm font-medium text-gray-700"
+            >No. Surat</label
+          >
+          <input
+            type="text"
+            id="noSurat"
+            name="noSurat"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label for="tglSurat" class="block text-sm font-medium text-gray-700"
+            >Tanggal Surat</label
+          >
+          <input
+            type="date"
+            id="tglSurat"
+            name="tglSurat"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label
+            for="tglDiterima"
+            class="block text-sm font-medium text-gray-700"
+            >Tanggal Diterima</label
+          >
+          <input
+            type="date"
+            id="tglDiterima"
+            name="tglDiterima"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label for="asalSurat" class="block text-sm font-medium text-gray-700"
+            >Asal Surat</label
+          >
+          <input
+            type="text"
+            id="asalSurat"
+            name="asalSurat"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div class="md:col-span-2">
+          <label for="perihal" class="block text-sm font-medium text-gray-700"
+            >Perihal</label
+          >
+          <input
+            type="text"
+            id="perihal"
+            name="perihal"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label for="prioritas" class="block text-sm font-medium text-gray-700"
+            >Prioritas</label
+          >
+          <select
+            id="prioritas"
+            name="prioritas"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="Rendah">Rendah</option>
+            <option value="Sedang">Sedang</option>
+            <option value="Tinggi">Tinggi</option>
+          </select>
+        </div>
+        <div>
+          <label for="fileSurat" class="block text-sm font-medium text-gray-700"
+            >File Surat (Scan/PDF)</label
+          >
+          <input
+            type="file"
+            id="fileSurat"
+            name="fileSurat"
+            accept=".pdf,.jpg,.jpeg,.png"
+            class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+        </div>
+        <div class="md:col-span-2">
+          <label
+            for="keterangan"
+            class="block text-sm font-medium text-gray-700"
+            >Keterangan</label
+          >
+          <textarea
+            id="keterangan"
+            name="keterangan"
+            rows="3"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          ></textarea>
+        </div>
+      </div>
+    </form>
+
+    <!-- Modal Footer -->
+    <div class="flex justify-end gap-3 p-6 border-t bg-gray-50">
+      <button
+        id="cancelModalBtn"
+        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+      >
+        Batal
+      </button>
+      <button
+        id="saveLetterBtn"
+        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+      >
+        Simpan
+      </button>
+    </div>
   </div>
 </div>

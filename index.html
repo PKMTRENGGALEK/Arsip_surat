@@ -13,16 +13,12 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded"
       rel="stylesheet"
     />
-    <!-- di dalam <head>, sebelum script lainnya -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- TAMBAHKAN INI -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 2. DataTables CSS (Untuk styling) -->
     <link
       rel="stylesheet"
       href="https://cdn.datatables.net/1.13.6/css/dataTables.jqueryui.min.css"
     />
-    <!-- 3. DataTables JS (WAJIB, harus setelah jQuery) -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
@@ -54,12 +50,34 @@
         opacity: 0;
         transition: opacity 0.3s;
       }
+      /* Transisi untuk sidebar agar lebih halus */
+      .sidebar-transition {
+        transition: transform 0.3s ease-in-out;
+      }
     </style>
   </head>
   <body class="bg-gray-100 text-gray-800">
-    <div class="flex h-screen">
+    <!-- Wrapper untuk seluruh aplikasi -->
+    <div id="app" class="flex h-screen overflow-hidden">
+      <!-- Tombol Hamburger untuk Mobile -->
+      <button
+        id="menu-toggle"
+        class="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-lg"
+      >
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+
+      <!-- Overlay untuk mobile saat sidebar terbuka -->
+      <div
+        id="sidebar-overlay"
+        class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"
+      ></div>
+
       <!-- Sidebar -->
-      <aside class="w-72 bg-white shadow-xl p-6 flex flex-col border-r">
+      <aside
+        id="sidebar"
+        class="sidebar-transition fixed md:relative md:translate-x-0 -translate-x-full w-72 bg-white shadow-xl p-6 flex flex-col border-r h-full z-40"
+      >
         <h1 class="text-2xl font-bold mb-10 text-gray-800">Manajemen Surat</h1>
         <nav class="flex flex-col gap-2">
           <a
@@ -68,7 +86,6 @@
           >
             <span class="material-symbols-rounded">dashboard</span>Dashboard
           </a>
-          <!-- MENU YANG SUDAH DIPERBAIKI -->
           <a
             data-page="suratmasuk"
             class="menu-item ripple flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-gray-200 cursor-pointer"
@@ -81,8 +98,6 @@
           >
             <span class="material-symbols-rounded">outbox</span>Surat Keluar
           </a>
-          <!-- AKHIR MENU YANG DIPERBAIKI -->
-
           <a
             data-page="settings"
             class="menu-item ripple flex items-center gap-4 py-3 px-4 rounded-xl hover:bg-gray-200 cursor-pointer"
@@ -93,15 +108,44 @@
       </aside>
 
       <!-- Content Area -->
-      <main id="content" class="flex-1 p-8 overflow-auto"></main>
+      <main
+        id="content"
+        class="flex-1 pt-16 md:pt-0 p-4 md:p-8 overflow-auto bg-gray-100"
+      >
+        <!-- Konten akan dimuat di sini -->
+      </main>
     </div>
-    <!-- 1. Panggil file JavaScript modular kita -->
+
     <script src="js/dashboard.js"></script>
     <script src="js/suratmasuk.js"></script>
-    <!-- TAMBAHKAN INI -->
     <script>
       const menuItems = document.querySelectorAll(".menu-item");
       const content = document.getElementById("content");
+      const menuToggle = document.getElementById("menu-toggle");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebar-overlay");
+
+      // Fungsi untuk toggle sidebar di mobile
+      function toggleSidebar() {
+        sidebar.classList.toggle("-translate-x-full");
+        sidebarOverlay.classList.toggle("hidden");
+      }
+
+      // Event listener untuk tombol hamburger
+      menuToggle.addEventListener("click", toggleSidebar);
+
+      // Event listener untuk overlay (klik di luar sidebar untuk menutup)
+      sidebarOverlay.addEventListener("click", toggleSidebar);
+
+      // Event listener untuk item menu (menutup sidebar setelah navigasi di mobile)
+      menuItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          // Cek apakah layar adalah mobile (lebar < 768px)
+          if (window.innerWidth < 768) {
+            toggleSidebar();
+          }
+        });
+      });
 
       document.addEventListener("click", (e) => {
         if (e.target.classList.contains("ripple")) {
@@ -118,8 +162,6 @@
         el.classList.add("bg-gray-800", "text-white");
       }
 
-      <!-- Letakkan ini di dalam tag <script> di index.html, mengganti logika dashboard sebelumnya -->
-
       function loadPage(page) {
         fetch(`pages/${page}.html`)
           .then((res) => res.text())
@@ -129,7 +171,6 @@
               content.innerHTML = html;
               content.classList.remove("opacity-0");
 
-              // Panggil fungsi inisialisasi yang sesuai setelah konten dimuat
               if (page === "dashboard") {
                 initDashboard();
               }
@@ -151,12 +192,11 @@
           setActiveMenu(btn);
         });
       });
-      // pemanggilan tiap fungsi dalam halaman
+
       document.addEventListener("DOMContentLoaded", function () {
-        // Panggil fungsi yang sudah diekspor oleh dashboard.js
         initDashboard();
       });
-      // akhir fungsi
+
       // Muat halaman pertama kali
       loadPage("dashboard");
       setActiveMenu(menuItems[0]);
